@@ -1,0 +1,75 @@
+CREATE DATABASE AWS_DATABASE;
+USE AWS_DATABASE;
+
+
+CREATE OR REPLACE TABLE TRANSACTION_RAW 
+(household_key	INT,
+BASKET_ID	INT,
+DAY	INT,
+PRODUCT_ID	INT,
+QUANTITY	INT,
+SALES_VALUE	FLOAT,
+STORE_ID	INT,
+RETAIL_DISC	FLOAT,
+TRANS_TIME	INT,
+WEEK_NO	INT,
+COUPON_DISC	INT,
+COUPON_MATCH_DISC INT);
+
+
+CREATE OR REPLACE FILE FORMAT CSV
+    type = 'csv' 
+    compression = 'none' 
+    field_delimiter = ','
+    field_optionally_enclosed_by = 'none'
+    skip_header = 1 ; 
+
+----------------------------------------------------AWS (S3) INTEGRATION------------------------------------------------------------------------
+CREATE OR REPLACE STORAGE INTEGRATION SNOWPIPE_INTEGRATION
+TYPE = EXTERNAL_STAGE
+STORAGE_PROVIDER = S3
+ENABLED = TRUE
+STORAGE_AWS_ROLE_ARN ='arn:aws:iam::143250224569:role/Role-1' -- ARN copied from Roles under IAM
+STORAGE_ALLOWED_LOCATIONS =('s3://retail-shivam/');        -- BUCKET PATH
+
+
+DESC INTEGRATION SNOWPIPE_INTEGRATION;
+
+
+CREATE OR REPLACE STAGE Retail_Stage
+URL ='s3://retail-shivam'
+-- credential not required
+--credentials=(aws_key_id='AKIAXQKR3H3PSG72XFMK'aws_secret_key='eKL6a6FjlQHic4s8Ne712Aelzg2ou4j6tNsVvFq5')
+file_format= CSV
+storage_integration = SNOWPIPE_INTEGRATION;
+
+LIST @Retail_Stage;
+
+SHOW STAGES;
+
+
+--CREATE SNOWPIPE THAT RECOGNISES CSV THAT ARE INGESTED FROM EXTERNAL STAGE AND COPIES THE DATA INTO EXISTING TABLE
+
+--The AUTO_INGEST=true parameter specifies to read 
+--- event notifications sent from an S3 bucket to an SQS queue when new data is ready to load.
+
+
+CREATE OR REPLACE PIPE Retail_Snowpipe
+AUTO_INGEST = TRUE AS
+COPY INTO AWS_DATABASE.PUBLIC.TRANSACTION_RAW
+FROM '@Retail_Stage/snowpipe/' 
+FILE_FORMAT = CSV;
+
+
+SHOW PIPES;
+
+
+----------------------------------------------------------PIPEREFRESH-----------------------------------------------------------------
+ALTER PIPE  Retail_Snowpipe refresh;
+
+SELECT COUNT(*) FROM TRANSACTION_RAW;
+
+SELECT * FROM TRANSACTION_RAW;
+
+select *
+from table(information_schema.copy_history (table_name=> 'TRANSACTION_RAW', start_time=> dateadd (hours, -1, current_timestamp())));

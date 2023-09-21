@@ -1,0 +1,351 @@
+CREATE DATABASE BIKESTORES;    -- NEW DATABASE CREATED
+USE DATABASE BIKESTORES;
+
+-- NEW SCHEMA CREATED
+
+CREATE OR REPLACE SCHEMA PRODUCTION;
+CREATE OR REPLACE SCHEMA SALES;
+
+-- TABLE CREATION IN SALES SCHEMA
+
+CREATE OR REPLACE TABLE SALES.STORES
+(
+ STORE_ID INT  IDENTITY(1,1) ,
+ STORE_NAME VARCHAR(25),
+ PHONE VARCHAR(25),
+ EMAIL VARCHAR(30),
+ STREET VARCHAR(30),
+ CITY VARCHAR(15),
+ STATE VARCHAR(5),
+ ZIP_CODE INT ,
+ PRIMARY KEY (STORE_ID)
+ );
+
+
+ CREATE OR REPLACE TABLE SALES.STAFFS
+ (
+  STAFF_ID INT,
+  FIRST_NAME VARCHAR(15),
+  LAST_NAME VARCHAR(15),
+  EMAIL VARCHAR(50) ,
+  PHONE VARCHAR(20) ,
+  ACTIVE TINYINT,
+  STORE_ID INT ,
+  MANAGER_ID INT,
+  PRIMARY KEY (STAFF_ID)
+ 
+ );
+
+  CREATE OR REPLACE TABLE SALES.CUSTOMERS
+  (
+   CUSTOMER_ID INT IDENTITY(1,1),
+   FIRST_NAME VARCHAR(15),
+   LAST_NAME VARCHAR(15),
+   PHONE VARCHAR(20),
+   EMAIL VARCHAR(50),
+   STREET VARCHAR(50),
+   CITY VARCHAR(50),
+   STATE CHAR(10),
+   ZIP_CODE INT,
+   PRIMARY KEY(CUSTOMER_ID)
+  
+  );
+
+  CREATE OR REPLACE TABLE SALES.ORDERS
+  (
+   ORDER_ID INT,
+   CUSTOMER_ID INT,
+   ORDER_STATUS INT,
+   ORDER_DATE VARCHAR(10),
+   REQUIRED_DATE VARCHAR(10),
+   SHIPPED_DATE VARCHAR(10),
+   STORE_ID INT,
+   STAFF_ID INT,
+   PRIMARY KEY(ORDER_ID)
+  
+  );
+
+  CREATE OR REPLACE TABLE SALES.ORDER_ITEMS
+  (
+   ORDER_ID INT,
+   ITEM_ID INT,
+   PRODUCT_ID INT,
+   QUANTITY INT,
+   LIST_PRICE DECIMAL(10,2),
+   DISCOUNT DECIMAL(4,2),
+   PRIMARY KEY(ORDER_ID,ITEM_ID)  
+   
+  );
+
+
+  CREATE OR REPLACE TABLE PRODUCTION.CATEGORIES
+  (
+   CATEGORY_ID INT,
+   CATEGORY_NAME VARCHAR(50),
+   PRIMARY KEY(CATEGORY_ID)
+  
+  );
+
+
+  CREATE OR REPLACE TABLE PRODUCTION.BRANDS
+  (
+   BRAND_ID INT,
+   BRAND_NAME VARCHAR(50),
+   PRIMARY KEY(BRAND_ID)
+  
+  );
+
+
+  CREATE OR REPLACE TABLE PRODUCTION.PRODUCTS
+  (
+   PRODUCT_ID INT,
+   PRODUCT_NAME VARCHAR(100),
+   BRAND_ID INT,
+   CATEGORY_ID INT,
+   MODEL_YEAR INT,
+   LIST_PRICE DECIMAL(10,2),
+   PRIMARY KEY(PRODUCT_ID)
+  
+  );
+
+
+  CREATE OR REPLACE TABLE PRODUCTION.STOCKS
+  (
+   STORE_ID INT,
+   PRODUCT_ID INT,
+   QUANTITY INT,
+   PRIMARY KEY(STORE_ID, PRODUCT_ID)
+  
+  );
+
+  CREATE OR REPLACE FILE FORMAT FILE_FORMAT1
+  TYPE = 'CSV'
+  COMPRESSION = 'NONE'
+  FIELD_DELIMITER = ','
+  FIELD_OPTIONALLY_ENCLOSED_BY = 'NONE'
+  SKIP_HEADER = 1 NULL_IF = ('NULL');
+  
+  ---------------------------- (2). ADDING FOREIGN KEYS TO THE TABLES -----------------
+
+  ALTER TABLE SALES.STAFFS
+  ADD FOREIGN KEY(STORE_ID) REFERENCES SALES.STORES(STORE_ID);
+
+  ALTER TABLE SALES.Staffs 
+  ADD FOREIGN KEY(MANAGER_ID) REFERENCES SALES.Staffs(STAFF_ID);
+
+  ALTER TABLE PRODUCTION.PRODUCTS
+  ADD FOREIGN KEY(CATEGORY_ID) REFERENCES PRODUCTION.CATEGORIES(CATEGORY_ID);
+
+  ALTER TABLE PRODUCTION.PRODUCTS
+  ADD FOREIGN KEY(BRAND_ID) REFERENCES PRODUCTION.BRANDS(BRAND_ID);
+
+  ALTER TABLE SALES.ORDERS
+  ADD FOREIGN KEY(CUSTOMER_ID) REFERENCES SALES.CUSTOMERS(CUSTOMER_ID);
+
+  ALTER TABLE SALES.ORDERS
+  ADD FOREIGN KEY(STORE_ID) REFERENCES SALES.STORES(STORE_ID);
+
+  ALTER TABLE SALES.ORDERS
+  ADD FOREIGN KEY(STAFF_ID) REFERENCES SALES.STAFFS(STAFF_ID);
+
+  ALTER TABLE SALES.ORDER_ITEMS
+  ADD FOREIGN KEY(ORDER_ID) REFERENCES SALES.ORDERS(ORDER_ID);
+
+  ALTER TABLE SALES.ORDER_ITEMS
+  ADD FOREIGN KEY(PRODUCT_ID) REFERENCES PRODUCTION.PRODUCTS(PRODUCT_ID);
+
+  ALTER TABLE PRODUCTION.STOCKS
+  ADD FOREIGN KEY(STORE_ID) REFERENCES SALES.STORES(STORE_ID);
+
+  ALTER TABLE PRODUCTION.STOCKS
+  ADD FOREIGN KEY(PRODUCT_ID) REFERENCES PRODUCTION.PRODUCTS(PRODUCT_ID);
+
+  
+-- (3). Does any of the table has missing or NULL value ? If yes which are those and what are their counts ?
+
+-- Sales.Customer - Column(PHONE) is having NULL values.
+  SELECT COUNT(*) AS TOT_NULL_VALUES  FROM SALES.CUSTOMERS WHERE PHONE IS NULL;
+  
+--  Sales.Orders - Column(SHIPPED_DATE) is having NULL values.
+  SELECT COUNT(*) AS TOT_NULL_VALUES from SALES.ORDERS WHERE SHIPPED_DATE is NULL;
+
+
+-- 4. Does the datasets has any DUPLICATE(identical rows) ? If yes – can you just keep the first record
+--    and remove all rest if its possible without using any JOINS or WINDOW function
+
+    SELECT COUNT(*) AS TOT_ROWS FROM SALES.CUSTOMERS; -- 1445
+    SELECT COUNT(DISTINCT first_name, last_name, phone, email, street, city, state, zip_code) AS TOT_DISTINCT_ROWS 
+    FROM SALES.CUSTOMERS; --1445
+
+    SELECT COUNT(*) AS TOT_ROWS FROM SALES.ORDERS; -- 1615
+    SELECT COUNT(DISTINCT order_id, customer_id, order_status, order_date, required_date, shipped_date, store_id,staff_id) AS TOT_DISTINCT_ROWS
+    FROM SALES.ORDERS;  -- 1615
+
+    SELECT COUNT(*) AS TOT_ROWS FROM SALES.ORDER_ITEMS; -- 4722
+    SELECT count(DISTINCT order_id, item_id, product_id, quantity, list_price,discount) AS TOT_DISTINCT_ROWS
+    FROM SALES.ORDER_ITEMS; -- 4722
+
+    SELECT COUNT(*) AS TOT_ROWS FROM SALES.STAFFS;  -- 10
+    SELECT COUNT(DISTINCT staff_id, first_name, last_name, email, phone, active, store_id, manager_id) AS TOT_DISTINCT_ROWS
+    FROM SALES.STAFFS;  -- 10
+
+    SELECT COUNT(*) AS TOT_ROWS FROM SALES.STORES; -- 3
+    SELECT COUNT(DISTINCT store_name, phone, email, street, city, state, zip_code) AS TOT_DISTINCT_ROWS
+    FROM SALES.STORES; -- 3
+
+    SELECT COUNT(*) AS TOT_ROWS FROM PRODUCTION.BRANDS; -- 9
+    SELECT COUNT(DISTINCT brand_id,brand_name) AS TOT_DISTINCT_ROWS
+    FROM PRODUCTION.BRANDS; -- 9
+
+    SELECT COUNT(*) AS TOT_ROWS FROM PRODUCTION.CATEGORIES; -- 7
+    SELECT COUNT(DISTINCT category_id,category_name) AS TOT_DISTINCT_ROWS
+    FROM PRODUCTION.CATEGORIES; -- 7
+
+    SELECT COUNT(*) AS TOT_ROWS FROM PRODUCTION.PRODUCTS; -- 321
+    SELECT COUNT(DISTINCT product_id, product_name, brand_id, category_id, model_year, list_price) AS TOT_DISTINCT_ROWS
+    FROM PRODUCTION.PRODUCTS; -- 321
+    
+    SELECT COUNT(*) AS TOT_ROWS FROM PRODUCTION.STOCKS; -- 939
+    SELECT COUNT(DISTINCT store_id, product_id, quantity) AS TOT_DISTINCT_ROWS
+    FROM PRODUCTION.STOCKS; -- 939
+
+    -- 5. How many unique tables are present in each schema and under each table how many records are
+    --    having ? (Write SQL Script for the same – I don’t need answer like 3/5/4 etc)
+
+    SELECT TABLE_SCHEMA, TABLE_NAME, ROW_COUNT
+    FROM INFORMATION_SCHEMA.TABLES 
+    ORDER BY 1 DESC; 
+
+
+    -- 6. How many total serving customer BikeStore has ?
+
+    SELECT COUNT(DISTINCT CUSTOMER_ID) AS TOT_SERVING_CUST FROM SALES.ORDERS ;
+
+
+    -- 7. How many total orders are there ?
+
+    SELECT COUNT(DISTINCT ORDER_ID) AS TOT_ORDERS FROM SALES.ORDERS;
+
+
+    -- 8. Which store has the highest number of sales ?
+
+    SELECT STORE_ID, 
+    COUNT(ORDER_ID) AS Highest_Sales
+    FROM SALES.ORDERS
+    GROUP BY 1
+    ORDER BY 2 DESC
+    LIMIT 1;
+
+                                                                      
+    -- 9. Which month the sales was highest and for which store ? 
+                                                                    
+    SELECT SUBSTR(ORDER_DATE,6,2) AS Month_No, 
+    ORDERS.STORE_ID, 
+    ROUND(SUM(QUANTITY*LIST_PRICE*(1-DISCOUNT)),2) AS TOT_SALES
+    FROM BIKESTORES.SALES.ORDER_ITEMS, BIKESTORES.SALES.ORDERS
+    GROUP BY 1,2
+    ORDER BY 3 DESC
+    LIMIT 1;
+
+   
+   -- 10. How many orders each customer has placed (give me top 10 customers)
+
+   SELECT CUSTOMER_ID, 
+   COUNT(DISTINCT ORDER_ID) AS TOT_ORDERS
+   FROM BIKESTORES.SALES.ORDERS
+   GROUP BY 1
+   ORDER BY 2 DESC
+   LIMIT 10;
+
+
+   -- 11. Which are the TOP 3 selling product ?
+
+   SELECT PRODUCT_ID, 
+   ROUND(SUM(QUANTITY*LIST_PRICE*(1-DISCOUNT)),2) AS TOT_SALES
+   FROM BIKESTORES.SALES.ORDER_ITEMS
+   GROUP BY 1
+   ORDER BY 2 DESC
+   LIMIT 3;
+   
+
+   -- 12. Which was the first and last order placed by the customer who has placed maximum number of orders ?
+
+   
+         SELECT CUSTOMER_ID, 
+         MIN(ORDER_ID) AS First_Order,
+         MAX(ORDER_ID) as Last_Order 
+         FROM BIKESTORES.SALES.ORDERS
+         GROUP BY 1
+         ORDER BY COUNT(ORDER_ID) DESC
+         LIMIT 1;
+                     
+
+
+    -- 13. For every customer , which is the cheapest product and the costliest product which the customer has bought.
+
+           SELECT Cheap.CUSTOMER_ID, Cheapest_Product, Costliest_Product
+           FROM
+                (
+                 SELECT CUSTOMER_ID, PRODUCT_NAME AS Cheapest_Product
+                 FROM 
+                     (
+                      SELECT CUSTOMER_ID, PRODUCT_NAME, 
+                      DENSE_RANK() OVER (PARTITION BY CUSTOMER_ID ORDER BY OT.LIST_PRICE ASC) AS PRICE_RANK
+                      FROM BIKESTORES.SALES.ORDERS O 
+                      INNER JOIN BIKESTORES.SALES.ORDER_ITEMS OT
+                      ON O.ORDER_ID = OT.ORDER_ID
+                      INNER JOIN BIKESTORES.PRODUCTION.PRODUCTS P
+                      ON OT.PRODUCT_ID = P.PRODUCT_ID
+                      ORDER BY 1,3
+                      )
+                 WHERE PRICE_RANK = 1
+                 ) Cheap
+                
+                 INNER JOIN 
+                
+               ( 
+                 SELECT CUSTOMER_ID, PRODUCT_NAME AS Costliest_Product
+                 FROM 
+                     (
+                      SELECT CUSTOMER_ID, PRODUCT_NAME, 
+                      DENSE_RANK() OVER (PARTITION BY CUSTOMER_ID ORDER BY OT.LIST_PRICE DESC) AS PRICE_RANK
+                      FROM BIKESTORES.SALES.ORDERS O 
+                      INNER JOIN BIKESTORES.SALES.ORDER_ITEMS OT
+                      ON O.ORDER_ID = OT.ORDER_ID
+                      INNER JOIN BIKESTORES.PRODUCTION.PRODUCTS P
+                      ON OT.PRODUCT_ID = P.PRODUCT_ID
+                      ORDER BY 1,3
+                      )
+                 WHERE PRICE_RANK = 1
+                 ) Costly
+         ON Cheap.CUSTOMER_ID = Costly.CUSTOMER_ID;        ;
+         
+         
+           
+
+
+        -- 14. Which product has orders more than 200 ?
+
+        SELECT PRODUCT_ID, COUNT(DISTINCT ORDER_ID) AS TOT_ORDERS
+        FROM BIKESTORES.SALES.ORDER_ITEMS 
+        GROUP BY 1
+        HAVING TOT_ORDERS > 200
+        ORDER BY 2 DESC;
+        
+
+        -- 15. Add a column TOTAL_PRICE with appropriate data type into the sales.order_items
+
+        ALTER TABLE BIKESTORES.SALES.ORDER_ITEMS
+        ADD COLUMN TOTAL_PRICE DECIMAL(11,2);
+
+
+        -- 16. Calculate TOTAL_PRICE = quantity * list price and Update the value for all rows in the sales.order_items table.
+
+        UPDATE BIKESTORES.SALES.ORDER_ITEMS
+        SET TOTAL_PRICE = ROUND(QUANTITY * LIST_PRICE,2);
+
+
+        -- 17. What is the value of the TOTAL_PRICE paid for all the sales.order_items ?
+
+        SELECT SUM(TOTAL_PRICE) AS TOT_PRICE_PAID FROM BIKESTORES.SALES.ORDER_ITEMS;
+        
