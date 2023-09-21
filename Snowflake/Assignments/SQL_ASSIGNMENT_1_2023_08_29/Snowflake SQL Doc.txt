@@ -333,7 +333,7 @@
                       )
                  WHERE PRICE_RANK = 1
                  ) Costly
-         ON Cheap.CUSTOMER_ID = Costly.CUSTOMER_ID;        ;
+         ON Cheap.CUSTOMER_ID = Costly.CUSTOMER_ID;       
          
          
            
