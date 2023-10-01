@@ -1,0 +1,36 @@
+select distinct("account_id") from MATILLION_DB.PUBLIC."awa_bank_data";
+
+--- CREATING FIRST TABLE : CUSTOMERNEW
+create or replace table customernew as select * from
+SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.CUSTOMER;
+select * from customernew;
+
+--- CREATING FIRST TABLE : ORDERNEW
+create or replace table ordernew as select * from
+SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.ORDERS;
+select * from ordernew;
+
+-- ************************************************
+--- CREATING OUTPUT TABLE : mastertable
+create or replace table mastertable_for_join
+(
+CUSTOMER_KEY NUMBER(38),
+CUSTOMER_NAME VARCHAR(200),
+CUSTOMER_ADDRESS VARCHAR(200),
+ORDER_KEY VARCHAR(200),
+ORDER_STATUS VARCHAR(10)
+);
+
+CREATE OR REPLACE TABLE mastertable_for_join_copy LIKE mastertable_for_join;
+
+INSERT INTO mastertable_for_join_copy as
+SELECT c.C_CUSTKEY, c.C_NAME, c.C_ADDRESS, o.O_ORDERKEY, o.O_ORDERSTATUS
+FROM customernew c
+INNER JOIN ordernew o
+ON c.C_CUSTKEY;
+
+
+drop table DEMODATABASE.PUBLIC."matillion_us_state_lookup";
+
+
+create database AirAIRCRAFT.PUBLICAIRCRAFT.PUBLIC."flight_sample"craft;

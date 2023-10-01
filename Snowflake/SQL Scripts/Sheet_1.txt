@@ -1,0 +1,126 @@
+create database demodatabase;
+use database demodatabase;
+
+create schema db_source;
+create schema db_dwh;
+
+select * from DEMODATABASE.PUBLIC."SP_Retail_txn_develop" where "household_key" = 2056;
+
+CREATE DATABASE RETAILS;
+USE RETAILS;
+use schema PUBLIC;
+
+CREATE OR REPLACE TABLE TRANSACTION_RAW 
+(household_key	INT,
+BASKET_ID	INT,
+DAY	INT,
+PRODUCT_ID	INT,
+QUANTITY	INT,
+SALES_VALUE	FLOAT,
+STORE_ID	INT,
+RETAIL_DISC	FLOAT,
+TRANS_TIME	INT,
+WEEK_NO	INT,
+COUPON_DISC	INT,
+COUPON_MATCH_DISC INT);
+
+select basket_id, sales_value,
+rank() over (partition by basket_id order by sales_value desc) as use_rank
+from RETAILS.PUBLIC.TRANSACTION_RAW;
+
+select basket_id, sales_value,
+dense_rank() over (partition by basket_id order by sales_value desc) as use_dense_rank
+from RETAILS.PUBLIC.TRANSACTION_RAW;
+
+-- total household key
+select count(distinct household_key) from RETAILS.PUBLIC.TRANSACTION_RAW; -- 2,494
+
+-- basket per household key
+select household_key, count(basket_id) as no_of_baskets
+from RETAILS.PUBLIC.TRANSACTION_RAW
+group by 1
+order by 2 desc;
+
+
+SELECT HOUSEHOLD_KEY, SUM(SALES_VALUE), SUM(QUANTITY) FROM RETAILS.PUBLIC.TRANSACTION_RAW 
+GROUP BY 1
+ORDER BY 2 DESC;
+
+CREATE OR REPLACE TABLE TRANSACTION_RAW_KPI AS
+SELECT household_key,
+SUM(QUANTITY) AS TOT_QUANTITY,
+SUM(SALES_VALUE) AS TOT_SALES_VALUE,
+
+CASE
+    WHEN TOT_SALES_VALUE > 0 AND TOT_SALES_VALUE <5000 THEN '0-5K'
+    WHEN TOT_SALES_VALUE >= 5000 AND TOT_SALES_VALUE <10000 THEN '5K-10K'
+    WHEN TOT_SALES_VALUE >= 10000 AND TOT_SALES_VALUE <15000 THEN '10-15K'
+    WHEN TOT_SALES_VALUE >= 15000 AND TOT_SALES_VALUE <20000 THEN '15-20K'
+    WHEN TOT_SALES_VALUE >= 20000 AND TOT_SALES_VALUE <25000 THEN '20-25K'
+    WHEN TOT_SALES_VALUE >= 25000 AND TOT_SALES_VALUE <30000 THEN '25-30K'
+    WHEN TOT_SALES_VALUE >= 30000 AND TOT_SALES_VALUE <35000 THEN '30-35K'
+    WHEN TOT_SALES_VALUE >= 35000 AND TOT_SALES_VALUE <40000 THEN '35-40K'
+    WHEN TOT_SALES_VALUE >= 40000 AND TOT_SALES_VALUE <45000 THEN '40-45K'
+    WHEN TOT_SALES_VALUE >= 45000 AND TOT_SALES_VALUE <50000 THEN '45-50K'
+    WHEN TOT_SALES_VALUE >= 50000 AND TOT_SALES_VALUE <55000 THEN '50-55K'
+END AS SALES_VALUE_BASKET
+FROM RETAILS.PUBLIC.TRANSACTION_RAW
+GROUP BY 1;
+
+SELECT SALES_VALUE_BASKET,
+SUM(TOT_QUANTITY),
+SUM(TOT_SALES_VALUE)
+FROM TRANSACTION_RAW_KPI
+GROUP BY 1;
+
+
+
+CREATE OR REPLACE TABLE TXN_MUL_CSV_LOAD LIKE RETAILS.PUBLIC.TRANSACTION_RAW;
+
+select * from RETAILS.PUBLIC.TRANSACTION_EXT_NEW ;
+SELECT * from RETAILS.PUBLIC.TRANSACTION_EXT_NEW where 'c1' = 'HOUSEHOLD_KEY';
+
+------------------------------------ STRING FUNCTION -------------------
+
+select substr('shivam panwar',1,5) as first_name;
+
+select substring('shivam panwar',8,6) as last_name;
+
+SELECT SUBSTR('Shivam Panwar',1,1)||SUBSTR('Shivam Panwar',8,1) as Name_initials;
+
+SELECT LENGTH(' Shivam ') as len_of_name;
+
+SELECT length(TRIM(' Shivam Panwar ')) as trim_name;
+
+SELECT LTRIM('#00#0#####1230#Shivam','#0');
+
+SELECT SPLIT_PART('SHIVAM PANWAR',' ',1) AS FIRST_NAME,
+SPLIT_PART('SHIVAM PANWAR',' ',2) AS LAST_NAME;
+
+SELECT ARRAY_SIZE(split('shivam panwar',' ')) as no_of_splits;
+
+
+
+
+CREATE OR REPLACE TABLE ORDER_ITEMS
+  (
+   ORDER_ID INT,
+   ITEM_ID INT,
+   PRODUCT_ID INT,
+   QUANTITY INT,
+   LIST_PRICE DECIMAL(10,2),
+   DISCOUNT DECIMAL(4,2),
+   PRIMARY KEY(ORDER_ID,ITEM_ID)  
+   
+  );
+
+  SELECT * FROM ORDER_ITEMS; -- 4730
+SELECT count(DISTINCT order_id, item_id, product_id, quantity, list_price,discount) FROM ORDER_ITEMS;
+  INSERT INTO order_items(order_id, item_id, product_id, quantity, list_price,discount) VALUES(1,1,20,1,599.99,0.2);
+INSERT INTO order_items(order_id, item_id, product_id, quantity, list_price,discount) VALUES(1,2,8,2,1799.99,0.07);
+INSERT INTO order_items(order_id, item_id, product_id, quantity, list_price,discount) VALUES(1,3,10,2,1549.00,0.05);
+INSERT INTO order_items(order_id, item_id, product_id, quantity, list_price,discount) VALUES(1,4,16,2,599.99,0.05);
+INSERT INTO order_items(order_id, item_id, product_id, quantity, list_price,discount) VALUES(1,5,4,1,2899.99,0.2);
+INSERT INTO order_items(order_id, item_id, product_id, quantity, list_price,discount) VALUES(2,1,20,1,599.99,0.07);
+INSERT INTO order_items(order_id, item_id, product_id, quantity, list_price,discount) VALUES(2,2,16,2,599.99,0.05);
+INSERT INTO order_items(order_id, item_id, product_id, quantity, list_price,discount) VALUES(3,1,3,1,999.99,0.05);

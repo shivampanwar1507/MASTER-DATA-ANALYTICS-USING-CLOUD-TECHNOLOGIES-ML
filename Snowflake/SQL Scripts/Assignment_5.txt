@@ -1,0 +1,311 @@
+CREATE DATABASE SPOTIFY_DATABASE;
+USE DATABASE SPOTIFY_DATABASE;
+
+-- CREATING TABLE
+
+CREATE OR REPLACE TABLE PLAYLIST
+(
+  PLAYLIST_URL VARCHAR(100),
+  YEAR_NO INT,
+  TRACK_ID VARCHAR(50),
+  TRACK_NAME VARCHAR(100),
+  TRACK_POPULARITY INT,
+  ALBUM VARCHAR(100),
+  ARTIST_ID VARCHAR(30) ,
+  ARTIST_NAME VARCHAR(50),
+  ARTIST_GENRES VARCHAR(200),
+  ARTIST_POPULARITY INT,
+  DANCE_ABILITY DECIMAL(5,3),
+  ENERGY DECIMAL(6,4),
+  KEY_ID TINYINT,
+  LOUDNESS DECIMAL(6,4),
+  MODE_BIT TINYINT,
+  SPEECHINESS DECIMAL(6,4),
+  ACOUSTICNESS DECIMAL(10,8),
+  INSTRUMENTALNESS DECIMAL(15,10),
+  LIVENESS DECIMAL(6,4),
+  VALENCE DECIMAL(6,4),
+  TEMPO DECIMAL(7,4),
+  DURATION_MS INT,
+  TIME_SIGNATURE TINYINT,
+  PRIMARY KEY (TRACK_ID, ARTIST_ID)
+
+);
+
+
+-- 1. Check the entire dataset
+
+SELECT * FROM SPOTIFY_DATABASE.PUBLIC.PLAYLIST;
+
+-- 2. Number of songs on Spotify for each artist
+
+SELECT ARTIST_NAME, 
+COUNT(TRACK_ID) AS TOT_SONGS
+FROM SPOTIFY_DATABASE.PUBLIC.PLAYLIST
+GROUP BY 1
+ORDER BY 2 DESC;
+
+-- 3. Top 10 songs based on popularity
+
+SELECT TRACK_NAME AS SONGS 
+FROM SPOTIFY_DATABASE.PUBLIC.PLAYLIST
+ORDER BY TRACK_POPULARITY DESC
+LIMIT 10;
+
+-- 4. Total number of songs on spotify based on year
+
+SELECT YEAR_NO AS YEAR, 
+COUNT(TRACK_ID) AS TOT_SONGS
+FROM SPOTIFY_DATABASE.PUBLIC.PLAYLIST
+GROUP BY 1
+ORDER BY 1;
+
+-- 5. Top song for each year (2000-2022) based on popularity
+
+SELECT YEAR_NO AS Year, Track_Name 
+FROM PLAYLIST P1,(
+                SELECT YEAR_NO AS Year, 
+                MAX(TRACK_POPULARITY) AS MOST_POPULAR
+                FROM SPOTIFY_DATABASE.PUBLIC.PLAYLIST
+                GROUP BY 1) T2
+WHERE P1.TRACK_POPULARITY = T2.MOST_POPULAR AND P1.YEAR_NO = T2.Year;
+
+
+-- 6. Analysis based on Tempo :
+--  tempo > 121.08 -> 'Above Average Tempo'
+--  tempo = 121.08 -> 'Average Tempo'
+--  tempo < 121.08 -> 'Below Average Tempo'
+
+CREATE OR REPLACE VIEW PLAYLIST_TEMPO_ANALYSIS_VIEW AS
+SELECT TRACK_NAME, ENERGY, TEMPO,
+CASE 
+    WHEN TEMPO > 121.08 THEN 'Above Average Tempo'
+    WHEN TEMPO = 121.08 THEN 'Average Tempo'
+    WHEN TEMPO < 121.08 THEN 'Below Average Tempo'
+END AS TEMPO_CATEGORY
+FROM SPOTIFY_DATABASE.PUBLIC.PLAYLIST
+WHERE TEMPO IS NOT NULL;
+
+SELECT * FROM Playlist_Tempo_Analysis_View ;
+
+
+-- 7. Songs with Highest Tempo
+
+SELECT TRACK_NAME, TEMPO, TEMPO_CATEGORY
+FROM SPOTIFY_DATABASE.PUBLIC.PLAYLIST_TEMPO_ANALYSIS_VIEW
+ORDER BY 2 DESC
+LIMIT 1;
+
+-- 8. Number of Songs for different Tempo Range : track_name, energy
+ /*         Modern_Music -> tempo BETWEEN 60.00 AND 100.00
+            Classical_Music -> tempo BETWEEN 100.001 AND 120.00
+            Dance_Music -> tempo BETWEEN 120.001 AND 150.01
+            HighTempo_Music -> tempo > 150.01              */
+
+CREATE OR REPLACE VIEW PLAYLIST_TEMPO_ANALYSIS_VIEW_2 AS
+SELECT TRACK_NAME, ENERGY, TEMPO,
+CASE
+    WHEN TEMPO BETWEEN 60.00 AND 100.00 THEN 'Modern_Music'
+    WHEN TEMPO BETWEEN 100.001 AND 120.00 THEN 'Classical_Music'
+    WHEN TEMPO BETWEEN 120.001 AND 150.01 THEN 'Dance_Music'
+    WHEN TEMPO > 150.01 THEN 'HighTempo_Music'
+END AS Music_Type
+FROM SPOTIFY_DATABASE.PUBLIC.PLAYLIST
+WHERE TEMPO IS NOT NULL;
+
+SELECT * FROM PLAYLIST_TEMPO_ANALYSIS_VIEW_2;
+
+-- 8.1 Number of songs of different TEMPO range
+
+SELECT Music_Type, COUNT(TRACK_NAME) AS Tot_Songs
+FROM PLAYLIST_TEMPO_ANALYSIS_VIEW_2
+GROUP BY 1
+ORDER BY 2 DESC;
+
+
+/*
+9.1 Energy Analysis : TOP 10 track_name, danceability, track_popularity
+         energy > 0.64 -> 'Above Average Energy
+         energy = 0.64 -> 'Average Energy’
+         energy < 0.64 -> 'Below Average Energy’
+*/  
+CREATE OR REPLACE VIEW PLAYLIST_ENERGY_ANALYSIS_VIEW AS
+SELECT TRACK_NAME, DANCE_ABILITY, TRACK_POPULARITY, ENERGY,
+CASE
+    WHEN ENERGY > 0.64 THEN 'Above Average Energy'
+    WHEN ENERGY = 0.64 THEN 'Average Energy'
+    WHEN ENERGY < 0.64 THEN 'Below Average Energy'           
+END AS Energy_Type
+FROM SPOTIFY_DATABASE.PUBLIC.PLAYLIST
+WHERE ENERGY IS NOT NULL;
+
+SELECT * FROM PLAYLIST_ENERGY_ANALYSIS_VIEW;
+
+-- OR 
+/*
+9.2 Energy Analysis : TOP 10 track_name, danceability, track_popularity
+         energy BETWEEN 0.1 AND 0.3 -> 'Calm Music'
+         energy BETWEEN 0.3 AND 0.6 -> 'Moderate Music'
+         Energy >0.6 -> ‘Energetic Music'
+*/  
+
+CREATE OR REPLACE VIEW PLAYLIST_ENERGY_ANALYSIS_VIEW_2 AS
+SELECT TRACK_NAME, DANCE_ABILITY, TRACK_POPULARITY, ENERGY,
+CASE
+    WHEN ENERGY BETWEEN 0.1 AND 0.3 THEN 'Calm Music'
+    WHEN ENERGY BETWEEN 0.3 AND 0.6 THEN 'Moderate Music'
+    WHEN ENERGY > 0.6 THEN 'Energetic Music' 
+    ELSE 'Others'
+END AS Music_Type
+FROM SPOTIFY_DATABASE.PUBLIC.PLAYLIST
+WHERE ENERGY IS NOT NULL;
+
+SELECT * FROM PLAYLIST_ENERGY_ANALYSIS_VIEW_2;
+
+
+/*
+10. Number of Songs for different energy ranges(above)
+*/
+
+SELECT ENERGY_TYPE, COUNT(TRACK_NAME) AS TOT_SONGS
+FROM PLAYLIST_ENERGY_ANALYSIS_VIEW
+GROUP BY 1
+ORDER BY 2 DESC;
+
+SELECT MUSIC_TYPE, COUNT(TRACK_NAME) AS TOT_SONGS
+FROM PLAYLIST_ENERGY_ANALYSIS_VIEW_2
+GROUP BY 1
+ORDER BY 2 DESC;
+
+/* 
+11. Danceability Analysis : Top 20 track_name, danceability
+        danceability BETWEEN 0.69 AND 0.79 -> 'Low Danceability' 
+        (danceability BETWEEN 0.49 AND 0.68) OR (danceability BETWEEN 0.79 AND 0.89) -> 'Moderate Danceability'
+        (danceability BETWEEN 0.39 AND 0.49) OR (danceability BETWEEN 0.89 AND 0.99) -> 'High Danceability'
+        danceability < 0.39 OR danceability > 0.99 -> 'Cant Dance on this one' 
+*/
+
+CREATE OR REPLACE VIEW PLAYLIST_DANCE_ABILITY_ANALYSIS_VIEW AS
+SELECT TRACK_NAME, DANCE_ABILITY,
+CASE
+    WHEN DANCE_ABILITY BETWEEN 0.69 AND 0.79 THEN 'Low Danceability'
+    WHEN (DANCE_ABILITY BETWEEN 0.49 AND 0.68) OR (DANCE_ABILITY BETWEEN 0.79 AND 0.89) THEN 'Moderate Danceability'
+    WHEN (DANCE_ABILITY BETWEEN 0.39 AND 0.49) OR (DANCE_ABILITY BETWEEN 0.89 AND 0.99) THEN 'High Danceability'
+    WHEN DANCE_ABILITY < 0.39 OR DANCE_ABILITY > 0.99 THEN 'Cant Dance on this one'
+    ELSE 'Others'
+END AS Dance_Ability_Category
+FROM SPOTIFY_DATABASE.PUBLIC.PLAYLIST
+WHERE DANCE_ABILITY IS NOT NULL;
+
+SELECT * FROM PLAYLIST_DANCE_ABILITY_ANALYSIS_VIEW;
+
+
+/*
+12. Number of Songs for different danceability ranges(above)
+*/
+
+SELECT DANCE_ABILITY_CATEGORY, COUNT(TRACK_NAME) AS TOT_SONGS
+FROM PLAYLIST_DANCE_ABILITY_ANALYSIS_VIEW
+GROUP BY 1
+ORDER BY 2 DESC;
+
+
+/*
+13. Loudness Analysis : Top 20 track_name, loudness,
+         loudness BETWEEN -23.00 AND -15.00 ->'Low Loudness'
+         loudness BETWEEN -14.99 AND -6.00 -> 'Below Average Loudness'
+         loudness BETWEEN -5.99 AND -2.90 -> 'Above Average Loudness'
+         loudness BETWEEN -2.89 AND -1.00 -> 'Peak Loudness'
+*/
+
+CREATE OR REPLACE VIEW PLAYLIST_LOUDNESS_ANALYSIS_VIEW AS
+SELECT TRACK_NAME, LOUDNESS,
+CASE
+    WHEN LOUDNESS BETWEEN -23.00 AND -15.00 THEN 'Low Loudness'
+    WHEN LOUDNESS BETWEEN -14.99 AND -6.00 THEN 'Below Average Loudness'
+    WHEN LOUDNESS BETWEEN -5.99 AND -2.90 THEN 'Above Average Loudness'
+    WHEN LOUDNESS BETWEEN -2.89 AND -1.00 THEN 'Peak Loudness'
+    ELSE 'Others'
+END AS Loudness_Analysis
+FROM SPOTIFY_DATABASE.PUBLIC.PLAYLIST
+WHERE LOUDNESS IS NOT NULL;
+
+SELECT * FROM PLAYLIST_LOUDNESS_ANALYSIS_VIEW;
+
+
+/*
+14. Number of Songs for different loudness ranges(above)
+*/
+
+SELECT LOUDNESS_ANALYSIS, COUNT(TRACK_NAME) AS TOT_SONGS
+FROM PLAYLIST_LOUDNESS_ANALYSIS_VIEW
+GROUP BY 1
+ORDER BY 2 DESC;
+
+
+/*
+15. Valence Analysis : Top 20 track_name, valence, track_popularity,
+         valence > 0.535 -> Above Avg Valence
+         valence = 0.535 -> Avg Valence
+         valence < 0.535 -> Below Average'
+*/
+
+CREATE OR REPLACE VIEW PLAYLIST_VALENCE_ANALYSIS_VIEW AS
+SELECT TRACK_NAME, TRACK_POPULARITY, VALENCE,
+CASE
+    WHEN valence > 0.535 THEN 'Above Avg Valence'
+    WHEN valence = 0.535 THEN 'Avg Valence'
+    WHEN valence < 0.535 THEN 'Below Avg Valence'
+END AS Valence_Analysis
+FROM SPOTIFY_DATABASE.PUBLIC.PLAYLIST
+WHERE VALENCE IS NOT NULL;
+
+SELECT * FROM PLAYLIST_VALENCE_ANALYSIS_VIEW;
+
+/*
+16. Number of Songs for different valence ranges(above)
+*/
+
+SELECT VALENCE_ANALYSIS, COUNT(TRACK_NAME) AS TOT_SONGS
+FROM PLAYLIST_VALENCE_ANALYSIS_VIEW
+GROUP BY 1
+ORDER BY 2 DESC;
+
+
+/*
+17. Speechiness Analsis : Top 20 track_name, speechiness, tempo,
+         speechiness > 0.081-> Above Avg Speechiness
+         speechiness = 0.081-> Avg Speechiness
+         speechiness < 0.081-> Below Speechiness
+*/
+
+SELECT TRACK_NAME,TEMPO, SPEECHINESS,
+CASE
+    WHEN SPEECHINESS > 0.081 THEN 'Above Avg Speechiness'
+    WHEN SPEECHINESS = 0.081 THEN 'Avg Speechiness'
+    WHEN SPEECHINESS < 0.081 THEN 'Below Avg Speechiness'
+END AS Speechiness_Analysis
+FROM SPOTIFY_DATABASE.PUBLIC.PLAYLIST
+WHERE SPEECHINESS IS NOT NULL
+LIMIT 20;
+
+
+/*
+18. Acoustic Analysis : DISTINCT TOP 25 track_name, album, artist_name, acousticness
+         (acousticness BETWEEN 0 AND 0.40000 -> 'Not Acoustic'
+         (acousticness BETWEEN 0.40001 AND 0.80000) ->'Acoustic'
+         (acousticness BETWEEN 0.80001 AND 1) ->'Highly Acoustic'
+*/
+
+SELECT DISTINCT TRACK_NAME, ALBUM, ARTIST_NAME, ACOUSTICNESS,
+CASE
+    WHEN ACOUSTICNESS BETWEEN 0 AND 0.40000 THEN 'Not Acoustic'
+    WHEN ACOUSTICNESS BETWEEN 0.40001 AND 0.80000 THEN 'Acoustic'
+    WHEN ACOUSTICNESS BETWEEN 0.80001 AND 1 THEN 'Highly Acoustic'
+    ELSE 'Others'
+END AS Acousticness_Analysis
+FROM SPOTIFY_DATABASE.PUBLIC.PLAYLIST
+WHERE ACOUSTICNESS IS NOT NULL
+LIMIT 25;
+
+

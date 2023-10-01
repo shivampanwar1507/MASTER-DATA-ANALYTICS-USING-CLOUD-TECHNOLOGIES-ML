@@ -1,0 +1,62 @@
+select * from MATILLION_DB.PUBLIC."awa_bank_data" limit 100;
+select distinct year("Txn_Date") from MATILLION_DB.PUBLIC."awa_bank_data";
+
+
+-- where ever txn year is 2020 set the bank = DBS ankBank 
+UPDATE MATILLION_DB.PUBLIC."awa_bank_data" SET "bank" = 'DBS Bank' WHERE year("Txn_Date") = 2020;
+
+-- where ever txn year is 2021 set the bank = UCO Bank 
+UPDATE MATILLION_DB.PUBLIC."awa_bank_data" SET "bank" = 'UCO Bank' WHERE year("Txn_Date") = 2021;
+
+-- where ever txn year is 2019 set the bank = Canara Bank 
+UPDATE MATILLION_DB.PUBLIC."awa_bank_data" SET "bank" = 'Canara Bank' WHERE year("Txn_Date") = 2019;
+
+-- where ever txn year is 2018 set the bank = Yes Bank 
+UPDATE MATILLION_DB.PUBLIC."awa_bank_data" SET "bank" = 'Yes Bank' WHERE year("Txn_Date") = 2018;
+
+-- where ever txn year is 2017 set the bank = ICICI Bank 
+UPDATE MATILLION_DB.PUBLIC."awa_bank_data" SET "bank" = 'ICICI Bank' WHERE year("Txn_Date") = 2017;
+
+-- where ever txn year is 2016 set the bank = HDFC Bank 
+UPDATE MATILLION_DB.PUBLIC."awa_bank_data" SET "bank" = 'HDFC Bank' WHERE year("Txn_Date") = 2016;
+
+
+SELECT "bank", count(*) as total_rows 
+from MATILLION_DB.PUBLIC."awa_bank_data" 
+GROUP BY 1
+ORDER BY 2 DESC;
+
+select * from MATILLION_DB.PUBLIC."awa_bank_data" limit 100;
+SELECT DISTINCT("Type") FROM MATILLION_DB.PUBLIC."awa_bank_data";
+
+-- FOR EVERY YEAR AND EVERY MONTH HOW MANY TOTAL WITHDRAWAL AMOUNT, count & TOTAL DEPOSIT HAS HAPPENED FOR EVERY BANK.
+-- WHAT IS THE TPC = TOTAL TXN / TOTAL CUSTOMER FOR EVERY BANK YEARWISE QUARTERLY DATA.
+
+
+SELECT "bank", TXN_YEAR, SUM(TOT_BALANCE) AS TOT_BAL, SUM(TOT_TXN) AS TOT_TRXN, SUM(TOT_CUSTOMER) AS TOT_CUST,
+ROUND((TOT_TRXN / TOT_CUST),0) AS TPC,
+ROUND((TOT_BAL / TOT_CUST),0) AS AMC
+FROM
+(SELECT "bank",
+DATE_TRUNC('YEAR', "Txn_Date") as TXN_YEAR, 
+EXTRACT(QUARTER FROM "Txn_Date") AS QTR_TXN, 
+DATE_TRUNC('MONTH', "Txn_Date") AS TXN_MONTH,
+SUM(CASE WHEN "Type" = 'Credit' THEN "Amount" END) AS TOT_CREDIT_AMOUNT,
+SUM(CASE WHEN "Type" = 'Withdrawal' THEN "Amount" END) AS TOT_WITHDRAWAL_AMOUNT,
+TOT_CREDIT_AMOUNT - TOT_WITHDRAWAL_AMOUNT AS TOT_BALANCE,
+COUNT(CASE WHEN "Type" = 'Credit' THEN 1 END) AS TOT_CREDIT_COUNT,
+COUNT(CASE WHEN "Type" = 'Withdrawal' THEN 1 END) AS TOT_WITHDRAWAL_COUNT,
+TOT_CREDIT_COUNT + TOT_WITHDRAWAL_COUNT AS TOT_TXN,
+-- SUM("Amount") AS TOT_TXN_AMOUNT,
+
+COUNT(DISTINCT("account_id")) AS TOT_CUSTOMER
+--ROUND((TOT_TXN / TOT_CUSTOMER),0) AS TPC,
+--ROUND((TOT_BALANCE / TOT_CUSTOMER),0) AS AMC
+
+FROM MATILLION_DB.PUBLIC."awa_bank_data"
+GROUP BY 1,2,3,4
+ORDER BY TOT_BALANCE DESC)
+GROUP BY 1,2
+ORDER BY AMC DESC;
+
+
